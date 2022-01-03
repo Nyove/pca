@@ -1,9 +1,18 @@
 import numpy as np
-import os, glob, random, cv2
-import matplotlib.pyplot as plt
+import cv2
+import os, random
 
 
-def load_images(root=u'./FaceDB_orl', split_rate=0.8):  # 加载图像集，随机选择sampleCount张图片用于训练
+def get_images(path):
+    image_list = []
+    for parent, dirnames, filenames in os.walk(path):
+        for filename in filenames:
+            if filename.lower().endswith(('png')):
+                image_list.append(os.path.join(parent, filename))
+    return image_list
+
+
+def load_images(path=u'./FaceDB_orl', split_rate=0.8):  # 加载图像集，随机选择sampleCount张图片用于训练
     data = []  # 单个文件夹下的数据集
     x_train = [] # 总训练集
     x_test = []  # 总测试集
@@ -12,10 +21,9 @@ def load_images(root=u'./FaceDB_orl', split_rate=0.8):  # 加载图像集，随�
 
     # 遍历40个文件夹
     for k in range(40):
-        folder = os.path.join(root, '%03d' % (k + 1))   # 当前文件夹
+        folder = os.path.join(path, '%03d' % (k + 1))   # 当前文件夹
 
-        # dataset是一个三维数组，(10, 112, 92)
-        data = [cv2.imread(d, 0) for d in glob.glob(os.path.join(folder, '*.png'))]    # ①glob.glob()返回一个路径列表；②cv2.imread()读取灰度图，0表示灰度图模式
+        data = [cv2.imread(image, 0) for image in get_images(folder)]   # ① cv2.imread()读取灰度图，0表示灰度图模式
 
         data_train_num = int(np.array(data).shape[0] * split_rate)
 
