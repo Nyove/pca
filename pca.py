@@ -4,30 +4,28 @@ import matplotlib.pyplot as plt
 
 
 def load_images(root=u'./FaceDB_orl', split_rate=0.8):  # 加载图像集，随机选择sampleCount张图片用于训练
-    dataset = []  # 总的数据集
-    x_train = [] # 训练集
-    x_test = []  # 测试集
-    y_train = []
-    y_test = []
-    dataset_y = []  # 总的标签
+    data = []  # 单个文件夹下的数据集
+    x_train = [] # 总训练集
+    x_test = []  # 总测试集
+    y_train = []    # 总训练集的标签
+    y_test = []     # 总测试集的标签
 
     # 遍历40个文件夹
     for k in range(40):
         folder = os.path.join(root, '%03d' % (k + 1))   # 当前文件夹
 
         # dataset是一个三维数组，(10, 112, 92)
-        dataset = [cv2.imread(d, 0) for d in glob.glob(os.path.join(folder, '*.png'))]    # ①glob.glob()返回一个路径列表；②cv2.imread()读取灰度图，0表示灰度图模式
+        data = [cv2.imread(d, 0) for d in glob.glob(os.path.join(folder, '*.png'))]    # ①glob.glob()返回一个路径列表；②cv2.imread()读取灰度图，0表示灰度图模式
 
-        data_train_num = int(np.array(dataset).shape[0] * split_rate)
+        data_train_num = int(np.array(data).shape[0] * split_rate)
 
         data_train_indexs = random.sample(range(10), data_train_num)  # random.data_train_indexs()从0-9中随机选择sampleCount个元素，return a new list
 
-        x_train.extend([dataset[i].ravel() for i in range(10) if i in data_train_indexs])
-        x_test.extend([dataset[i].ravel() for i in range(10) if i not in data_train_indexs])
+        x_train.extend([data[i].ravel() for i in range(10) if i in data_train_indexs])
+        x_test.extend([data[i].ravel() for i in range(10) if i not in data_train_indexs])
 
-        y_train.extend([k] * data_train_num)
+        y_train.extend([k] * data_train_num)    # 将文件夹名作为标签
         y_test.extend([k] * (10 - data_train_num))
-        dataset_y.extend([k] * 10)    # 将文件夹名作为标签
 
     return np.array(x_train), np.array(y_train), np.array(x_test), np.array(y_test)
 
@@ -73,9 +71,13 @@ def predict(xTrain, yTrain, num_train, data_mean, x_test, V):
     # 降维处理
     x_test_low_dim = np.array((x_test - np.tile(data_mean, (1, 1))) * V)
 
-    predict_result = yTrain[np.sum((xTrain - np.tile(x_test_low_dim, (num_train, 1))) ** 2, axis=1).argmin()]
+    # S1.计算欧氏距离 S2.合并所有列: (310, 1) → (320, 1) S3.得到曼哈顿距离最小的索引 S4.得到预测结果
+    predict_result = yTrain[np.sum(np.abs(xTrain - np.tile(x_test_low_dim, (num_train, 1))), axis=1).argmin()]
+    print('曼哈顿距离识别的编号为 %d' % (predict_result + 1))
 
-    print('识别的编号为 %d' % (predict_result + 1))
+    # S1.计算欧氏距离 S2.合并所有列: (310, 1) → (320, 1) S3.得到欧式距离最小的索引 S4.得到预测结果
+    # predict_result = yTrain[np.sum((xTrain - np.tile(x_test_low_dim, (num_train, 1))) ** 2, axis=1).argmin()]
+    # print('欧式距离识别的编号为 %d' % (predict_result + 1))
 
 
 def main():
@@ -90,14 +92,19 @@ def main():
     # 降维处理 shape(80, 100)
     x_test_low_dim = np.array((x_test - np.tile(data_mean, (num_test, 1))) * V)
 
-    # ①argmin()求最小值的索引 ②求欧式距离后将列压缩成一列 → (320, 1)
-    predict_results = [y_train[np.sum((x_train_low_dim - np.tile(d, (num_train, 1))) ** 2, axis=1).argmin()]
+    # S1.计算欧氏距离 S2.合并所有列: (310, 1) → (320, 1) S3.得到曼哈顿距离最小的索引 S4.得到预测结果
+    predict_results = [y_train[np.sum(np.abs(x_train_low_dim - np.tile(d, (num_train, 1))), axis=1).argmin()]
                    for d in x_test_low_dim]
-    print(u'欧式距离法识别率: %.2f%%' % ((predict_results == y_test).mean() * 100))
+    print(u'曼哈顿距离识别率: %.2f%%' % ((predict_results == y_test).mean() * 100))
+
+    # S1.计算欧氏距离 S2.合并所有列: (310, 1) → (320, 1) S3.得到欧式距离最小的索引 S4.得到预测结果
+    # predict_results = [y_train[np.sum((x_train_low_dim - np.tile(d, (num_train, 1))) ** 2, axis=1).argmin()]
+    #                for d in x_test_low_dim]
+    # print(u'欧式距离识别率: %.2f%%' % ((predict_results == y_test).mean() * 100))
 
     print("\nStart Predicting.")
-    testImg = "./test.png"
-    predict(x_train_low_dim, y_train, num_train, data_mean, cv2.imread(testImg, 0).ravel(), V)
+    test_img = "./test.png"
+    predict(x_train_low_dim, y_train, num_train, data_mean, cv2.imread(test_img, 0).ravel(), V)
     print("Finish Predicting.")
 
 
