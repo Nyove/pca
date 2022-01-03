@@ -54,57 +54,8 @@ def pca(x_train, k):
     # 降维
     V1 = Z.T * V1  # 小矩阵特征向量向大矩阵特征向量过渡
 
-    for i in range(k):  # 特征向量归一化
-        V1[:, i] /= np.linalg.norm(V1[:, i])  # 特征向量归一化
+    return np.array(Z * V1), data_mean, V1
 
-    # 可解释性方差
-    tot = sum(D)
-    var_exp = [(i / tot) * 100 for i in sorted(D, reverse=True)]
-    var_exp1 = var_exp[:k]
-    # print(var_exp1)
-    return np.array(Z * V1), data_mean, V1, var_exp1
-
-
-def plt_showVariance_ratio(x_train):
-    explained_variance_ratio = []
-    for i in range(1, 150):
-        xTrain, data_mean, V, var_exp = pca(x_train, i)
-        ele = 0
-        total = 0
-        while (ele < len(var_exp)):
-            total = total + var_exp[ele]
-            ele += 1
-        explained_variance_ratio.append(total)
-    plt.plot(range(1, 150), explained_variance_ratio)
-    plt.savefig('task2.jpg')
-    plt.show()
-
-
-def plt_showVFace(V, var_exp):
-    # 显示100维特征脸
-    flg, axes = plt.subplots(10, 10, figsize=(15, 20), subplot_kw={'xticks': [], 'yticks': []})
-    for i, ax in enumerate(axes.flat):
-        ax.imshow(V.T[i, :].reshape(112, 92), cmap="gray")
-        ax.set_title(round(var_exp[i], 2))
-    plt.savefig('task.jpg')
-    plt.show()
-
-
-def plt_showAllDataMeanFace(data):
-    # 平均脸
-    average_face = np.mean(data, axis=0)  # axis = 0：压缩行，对各列求均值，返回 1* n 矩阵
-    # print(average_face)
-    plt.imshow(average_face.reshape((112, 92)), cmap="gray")
-    plt.title('全部图片的平均脸')
-    plt.savefig('allDataFaceMean.jpg')
-    plt.show()
-
-
-def plt_showTrainDataMeanFace(mean):
-    plt.imshow(mean.reshape((112, 92)), cmap="gray")
-    plt.title('训练数据集的平均脸')
-    plt.savefig('trainDataFaceMean.jpg')
-    plt.show()
 
 
 def predict(xTrain, yTrain, num_train, data_mean, x_test, V):
@@ -129,18 +80,10 @@ def main():
 
     # 训练pca模型
     print("Start Traning.")
-    xTrain, data_mean, V, var_exp = pca(x_train, 100)
+    xTrain, data_mean, V = pca(x_train, 100)
     print("Finish Traning.")
 
-    # 得到测试脸在特征向量下的数据
     xTest = np.array((x_test - np.tile(data_mean, (num_test, 1))) * V)
-
-    # print("特征脸：")
-    # plt_showVFace(V, var_exp)   # 同时将/图片保存在本目录下
-    # print("所有数据的平均脸：")
-    # plt_showAllDataMeanFace(xtotal)
-    # print("训练数据的平均脸：")
-    # plt_showTrainDataMeanFace(data_mean)
 
     yPredict = [y_train[np.sum((xTrain - np.tile(d, (num_train, 1))) ** 2, 1).argmin()] for d in xTest]
     print(u'欧式距离法识别率: %.2f%%' % ((yPredict == y_test).mean() * 100))
